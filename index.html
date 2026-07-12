@@ -1040,9 +1040,9 @@
           </div>
           <div class="actions">
             <button class="primary" id="exportSkinreset">백업 파일 만들기</button>
-            <label class="secondary">백업 가져오기<input type="file" id="importSkinreset" accept=".skinreset,application/json"></label>
+            <button class="secondary" type="button" id="chooseSkinreset">백업 가져오기</button><input type="file" id="importSkinreset" aria-label="백업 파일 선택">
           </div>
-          <p class="notice">백업 파일을 iCloud Drive·Google Drive·메일 등에 보관하면 다른 기기에서도 가져올 수 있습니다.</p>
+          <p class="notice">백업 파일을 iCloud Drive·Google Drive·메일 등에 보관하면 다른 기기에서도 가져올 수 있습니다. 모바일에서는 파일 앱의 다운로드 또는 iCloud Drive에서 .skinreset 파일을 선택하세요.</p>
         </article>
 
         <article class="backup-card">
@@ -1089,7 +1089,7 @@
           <div id="historyList" class="history"></div>
           <div class="actions" style="margin-top:16px">
             <button class="secondary" id="exportData">데이터 내보내기</button>
-            <label class="secondary">데이터 불러오기<input type="file" id="importData" accept="application/json"></label>
+            <button class="secondary" type="button" id="chooseImportData">데이터 불러오기</button><input type="file" id="importData" aria-label="데이터 파일 선택">
             <button class="danger" id="resetData">전체 초기화</button>
           </div>
         </article>
@@ -1917,6 +1917,61 @@ function downloadTextFile(filename,text,type='application/json'){
   a.click();
   setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},1200);
 }
+
+async function readBackupFile(file){
+  if(!file)throw new Error('선택된 파일이 없습니다.');
+
+  let text='';
+  if(typeof file.text==='function'){
+    text=await file.text();
+  }else{
+    text=await new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(String(reader.result||''));
+      reader.onerror=()=>reject(reader.error||new Error('파일을 읽지 못했습니다.'));
+      reader.readAsText(file,'utf-8');
+    });
+  }
+
+  text=String(text||'').replace(/^\uFEFF/,'').trim();
+  if(!text)throw new Error('빈 파일입니다.');
+
+  let raw;
+  try{
+    raw=JSON.parse(text);
+  }catch{
+    throw new Error('백업 파일의 내용을 읽을 수 없습니다.');
+  }
+
+  const isWrapped=raw&&raw.format==='skin-reset-365'&&raw.state&&typeof raw.state==='object';
+  const isLegacy=raw&&typeof raw==='object'&&(
+    raw.records||raw.goalPhotos||raw.actualPhotos||raw.startDate||raw.cycle
+  );
+
+  if(!isWrapped&&!isLegacy){
+    throw new Error('Skin Reset 365 백업 파일이 아닙니다.');
+  }
+  return raw;
+}
+
+async function importBackupFromInput(input){
+  const file=input?.files?.[0];
+  if(!file)return;
+
+  try{
+    const raw=await readBackupFile(file);
+    const fileLabel=file.name||'선택한 백업 파일';
+    if(!confirm(`${fileLabel}의 데이터로 현재 앱을 복원할까요?\n현재 데이터는 교체됩니다.`))return;
+    restoreState(raw);
+    toast('백업을 복원했습니다.');
+  }catch(err){
+    console.error('[Skin Reset] 백업 가져오기 오류',err);
+    alert(`백업을 가져오지 못했습니다.\n${err?.message||'파일을 다시 확인해 주세요.'}`);
+  }finally{
+    input.value='';
+  }
+}
+
 function restoreState(raw){
   const source=raw?.state&&raw.format==='skin-reset-365'?raw.state:raw;
   state={
@@ -2044,28 +2099,15 @@ function bindBackupAndCompareControls(){
     });
   }
 
+  const chooseSkinreset=document.getElementById('chooseSkinreset');
   const importInput=document.getElementById('importSkinreset');
+  if(chooseSkinreset&&!chooseSkinreset.dataset.bound){
+    chooseSkinreset.dataset.bound='1';
+    chooseSkinreset.addEventListener('click',()=>importInput?.click());
+  }
   if(importInput&&!importInput.dataset.bound){
     importInput.dataset.bound='1';
-    importInput.addEventListener('change',e=>{
-      const f=e.target.files?.[0];
-      if(!f)return;
-      const rd=new FileReader();
-      rd.onload=()=>{
-        try{
-          const raw=JSON.parse(rd.result);
-          if(!confirm('현재 데이터를 백업 파일의 내용으로 교체할까요?'))return;
-          restoreState(raw);
-          toast('백업을 복원했습니다.');
-        }catch(err){
-          console.error(err);
-          alert('올바른 Skin Reset 백업 파일이 아닙니다.');
-        }finally{
-          e.target.value='';
-        }
-      };
-      rd.readAsText(f);
-    });
+    importInput.addEventListener('change',()=>importBackupFromInput(importInput));
   }
 
   const reportMonthEl=document.getElementById('reportMonth');
@@ -2148,9 +2190,10 @@ document.getElementById('exportData').onclick=()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='skin-reset-365-data.json';a.click();URL.revokeObjectURL(a.href)
 };
-document.getElementById('importData').onchange=e=>{
-  const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const raw=JSON.parse(rd.result);state={...defaultState(),...raw,reminder:{...defaultState().reminder,...(raw.reminder||{})},missions:{...(raw.missions||{})},missionHistory:[...(raw.missionHistory||[])],customQuotes:[...(raw.customQuotes||[])],favoriteQuotes:[...(raw.favoriteQuotes||[])],quoteHistory:{...(raw.quoteHistory||{})}};save();renderAll();toast('데이터를 불러왔습니다.')}catch{alert('올바른 백업 파일이 아닙니다.')}};rd.readAsText(f)
-};
+const chooseImportData=document.getElementById('chooseImportData');
+const importDataInput=document.getElementById('importData');
+if(chooseImportData)chooseImportData.onclick=()=>importDataInput?.click();
+if(importDataInput)importDataInput.onchange=()=>importBackupFromInput(importDataInput);
 document.getElementById('resetData').onclick=()=>{if(confirm('모든 기록과 사진을 삭제할까요?')){localStorage.removeItem(KEY);state=defaultState();renderAll();toast('초기화되었습니다.')}}
 
 document.addEventListener('click',e=>{
