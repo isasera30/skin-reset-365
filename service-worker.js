@@ -1,5 +1,5 @@
-const CACHE='skin-reset-365-v2.0.2-search-fixed';
-const ASSETS=['./','./index.html','./css/style.css','./data/flour-foods.js','./js/app.js','./manifest.webmanifest'];
+const CACHE='skin-reset-365-v2.0.3-flat-fixed';
+const ASSETS=['./','./index.html','./style.css','./flour-foods.js','./app.js','./manifest.webmanifest'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
   self.skipWaiting();

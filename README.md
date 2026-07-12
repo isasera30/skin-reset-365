@@ -64,12 +64,9 @@
 ```text
 skin-reset-365/
 ├── index.html
-├── css/
-│   └── style.css
-├── js/
-│   └── app.js
-├── data/
-│   └── flour-foods.js
+├── style.css
+├── app.js
+├── flour-foods.js
 ├── manifest.webmanifest
 ├── service-worker.js
 ├── .gitignore
@@ -99,6 +96,6 @@ skin-reset-365/
 - 서비스 워커 캐시 버전 갱신
 
 
-### v2.0.2
+### v2.0.3
 - 밀가루 백과 검색이 대체 음식 설명까지 일치시키던 문제 수정
 - 음식명·별칭·성분명만 검색하도록 변경
