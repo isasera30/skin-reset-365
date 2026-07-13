@@ -4,9 +4,9 @@ const addDays=(d,n)=>{const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);r
 const diffDays=(a,b)=>Math.floor((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);
 const avg=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const defaultState=()=>({startDate:today(),goalReason:'이 피부를 향해, 오늘도 한 걸음.',goalProgress:0,goalPhotos:[],actualPhotos:[],records:{},checks:{},futureLetter:'',xp:0,missions:{},missionHistory:[],customQuotes:[],favoriteQuotes:[],quoteHistory:{},reminder:{enabled:false,time:'21:30',weekend:true,skipDone:true,lastNotified:''},cycle:{startDate:'',endDate:'',cycleLength:28,periodLength:5},timeCapsules:{},lastBackupAt:'',flourFavorites:[],flourRecent:[],customFlourFoods:[]});
+const defaultState=()=>({startDate:today(),goalReason:'이 피부를 향해, 오늘도 한 걸음.',goalProgress:0,goalPhotos:[],actualPhotos:[],records:{},checks:{},futureLetter:'',xp:0,missions:{},missionHistory:[],customQuotes:[],favoriteQuotes:[],quoteHistory:{},reminder:{enabled:false,time:'21:30',weekend:true,skipDone:true,lastNotified:''},cycle:{startDate:'',endDate:'',cycleLength:28,periodLength:5},timeCapsules:{},lastBackupAt:'',flourFavorites:[],flourRecent:[],customFlourFoods:[],routineChecks:{}});
 let state=load();
-function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||'{}');return {...defaultState(),...raw,reminder:{...defaultState().reminder,...(raw.reminder||{})},missions:{...(raw.missions||{})},missionHistory:[...(raw.missionHistory||[])],customQuotes:[...(raw.customQuotes||[])],favoriteQuotes:[...(raw.favoriteQuotes||[])],quoteHistory:{...(raw.quoteHistory||{})},cycle:{...defaultState().cycle,...(raw.cycle||{})},timeCapsules:{...(raw.timeCapsules||{})},lastBackupAt:raw.lastBackupAt||'',flourFavorites:[...(raw.flourFavorites||[])],flourRecent:[...(raw.flourRecent||[])],customFlourFoods:[...(raw.customFlourFoods||[])]}}catch{return defaultState()}}
+function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||'{}');return {...defaultState(),...raw,reminder:{...defaultState().reminder,...(raw.reminder||{})},missions:{...(raw.missions||{})},missionHistory:[...(raw.missionHistory||[])],customQuotes:[...(raw.customQuotes||[])],favoriteQuotes:[...(raw.favoriteQuotes||[])],quoteHistory:{...(raw.quoteHistory||{})},cycle:{...defaultState().cycle,...(raw.cycle||{})},timeCapsules:{...(raw.timeCapsules||{})},lastBackupAt:raw.lastBackupAt||'',flourFavorites:[...(raw.flourFavorites||[])],flourRecent:[...(raw.flourRecent||[])],customFlourFoods:[...(raw.customFlourFoods||[])],routineChecks:{...(raw.routineChecks||{})}}}catch{return defaultState()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
 function toast(msg='저장되었습니다.'){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
 function recordScore(r){
@@ -611,6 +611,11 @@ document.getElementById('saveRecord').onclick=()=>{
   state.records[date]=r;
   if(date===today()){
     state.checks[date]={...(state.checks[date]||{}),flourFree:r.flour===0,waterDone:r.water>=1.5,sleepDone:true,skinDone:true};
+    state.routineChecks=state.routineChecks||{};
+    state.routineChecks[date]={...(state.routineChecks[date]||{})};
+    const autoTime=`${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`;
+    if(r.water>=2)state.routineChecks[date].water2L=state.routineChecks[date].water2L||autoTime;
+    if(r.flour===0)state.routineChecks[date].flourFree=state.routineChecks[date].flourFree||autoTime;
   }
   save();renderAll();loadRecordDate(date);
   toast(existed?'기록을 수정했습니다.':'기록을 저장했습니다.');
@@ -661,6 +666,131 @@ function homeSubQuoteForToday(){
   return pool[hashDate(today()+'home-sub')%pool.length];
 }
 
+
+const dailyRoutineItems=[
+  {id:'berberSmoothie',label:'베르베르 스무디'},
+  {id:'phyto',label:'파이토'},
+  {id:'bromelain',label:'브로멜라인'},
+  {id:'pantothenic',label:'판토텐산'},
+  {id:'monoOrange',label:'모노오렌지'},
+  {id:'water2L',label:'물 2L'},
+  {id:'flourFree',label:'오늘 무밀가루'}
+];
+
+function routineForDate(date=today()){
+  return state.routineChecks?.[date]||{};
+}
+function routineDoneCount(date=today()){
+  const checks=routineForDate(date);
+  return dailyRoutineItems.filter(item=>!!checks[item.id]).length;
+}
+function routineStreak(){
+  let count=0;
+  let date=today();
+  while(routineDoneCount(date)===dailyRoutineItems.length){
+    count++;
+    date=addDays(date,-1);
+  }
+  return count;
+}
+function formatRoutineTime(value){
+  if(!value)return '미완료';
+  if(typeof value==='string'&&/^\d{2}:\d{2}$/.test(value))return `완료 ${value}`;
+  const parsed=new Date(value);
+  if(Number.isNaN(parsed.getTime()))return '완료';
+  return `완료 ${String(parsed.getHours()).padStart(2,'0')}:${String(parsed.getMinutes()).padStart(2,'0')}`;
+}
+function renderDailyRoutine(){
+  const checks=routineForDate();
+  document.querySelectorAll('[data-routine]').forEach(input=>{
+    const id=input.dataset.routine;
+    input.checked=!!checks[id];
+    const time=document.querySelector(`[data-routine-time="${id}"]`);
+    if(time)time.textContent=formatRoutineTime(checks[id]);
+  });
+  const done=routineDoneCount();
+  const total=dailyRoutineItems.length;
+  const percent=Math.round(done/total*100);
+  const progressText=document.getElementById('routineProgressText');
+  const progressBar=document.getElementById('routineProgressBar');
+  const message=document.getElementById('routineCompleteMessage');
+  const streakText=document.getElementById('routineStreakText');
+  if(progressText)progressText.textContent=`${done} / ${total}`;
+  if(progressBar)progressBar.style.width=percent+'%';
+  if(message){
+    message.textContent=done===total
+      ? '🎉 오늘 피부 루틴을 모두 완료했어요!'
+      : done===0
+        ? '하나씩 체크하며 오늘의 루틴을 완성해 보세요.'
+        : `오늘 루틴 ${percent}% 완료했어요.`;
+  }
+  if(streakText)streakText.textContent=`연속 완료 ${routineStreak()}일`;
+}
+function bindDailyRoutine(){
+  document.querySelectorAll('[data-routine]').forEach(input=>{
+    if(input.dataset.bound)return;
+    input.dataset.bound='1';
+    input.addEventListener('change',()=>{
+      const date=today();
+      state.routineChecks=state.routineChecks||{};
+      state.routineChecks[date]={...(state.routineChecks[date]||{})};
+      if(input.checked){
+        const now=new Date();
+        state.routineChecks[date][input.dataset.routine]=
+          `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      }else{
+        delete state.routineChecks[date][input.dataset.routine];
+      }
+      save();
+      renderDailyRoutine();
+      if(routineDoneCount()===dailyRoutineItems.length){
+        toast('오늘 피부 루틴 100% 완료!');
+      }
+    });
+  });
+}
+function renderHomeMission(){
+  const mission=chooseMission();
+  const card=document.getElementById('homeMissionCard');
+  if(!card)return;
+  card.classList.toggle('lucky',!!mission.lucky);
+  const tag=document.getElementById('homeMissionTag');
+  const xp=document.getElementById('homeMissionXP');
+  const icon=document.getElementById('homeMissionIcon');
+  const title=document.getElementById('homeMissionTitle');
+  const reason=document.getElementById('homeMissionReason');
+  const button=document.getElementById('completeHomeMission');
+  const done=document.getElementById('homeMissionDone');
+  if(tag)tag.textContent=mission.lucky?'🎁 오늘의 럭키 미션':'🌱 오늘의 랜덤 미션';
+  if(xp)xp.textContent=`+${mission.xp} XP`;
+  if(icon)icon.textContent=mission.icon||(mission.lucky?'🎁':'🌱');
+  if(title)title.textContent=mission.title;
+  if(reason)reason.textContent=mission.lucky
+    ? '오늘은 특별 보상 2배 미션이 등장했어요.'
+    : '매일 달라지는 작은 미션으로 피부 습관을 만들어 보세요.';
+  if(button)button.hidden=!!mission.done;
+  if(done)done.hidden=!mission.done;
+}
+function completeTodayMission(){
+  const mission=chooseMission();
+  if(mission.done)return;
+  mission.done=true;
+  mission.completedAt=new Date().toISOString();
+  state.xp=Number(state.xp||0)+mission.xp;
+  state.missions[today()]=mission;
+  state.missionHistory.push({...mission});
+  save();
+  renderAll();
+  toast(`미션 완료! +${mission.xp} XP`);
+}
+function bindHomeMission(){
+  const button=document.getElementById('completeHomeMission');
+  if(button&&!button.dataset.bound){
+    button.dataset.bound='1';
+    button.addEventListener('click',completeTodayMission);
+  }
+}
+
 function renderHome(){
   const journeyDays=Math.max(1,diffDays(state.startDate,today())+1);
   const journeyDayEl=document.getElementById('journeyDay');
@@ -695,6 +825,10 @@ function renderHome(){
   [[30,'p30'],[90,'p90'],[365,'p365']].forEach(([n,id])=>{const p=clamp(Math.round(days/n*100),0,100);document.getElementById(id).style.width=p+'%';document.getElementById(id+'Text').textContent=p+'%'});
   const checks=state.checks[today()]||{};
   document.querySelectorAll('[data-check]').forEach(c=>c.checked=!!checks[c.dataset.check]);
+  renderDailyRoutine();
+  renderHomeMission();
+  bindDailyRoutine();
+  bindHomeMission();
 }
 function renderGoals(){
   document.getElementById('goalReason').value=state.goalReason||'';
@@ -899,10 +1033,30 @@ function todayQuote(){
  const quote=pool[hashDate(today()+'quote')%pool.length];return {...quote,label:meta.label,cls:meta.cls};
 }
 
-const missionPool=[{id:'water',title:'물 한 컵 더 마시기',xp:5,kind:'water'},{id:'record',title:'오늘 피부 기록 남기기',xp:8,kind:'record'},{id:'photo',title:'피부 사진 한 장 남기기',xp:8,kind:'photo'},{id:'flour',title:'다음 식사는 밀가루 없이 먹기',xp:12,kind:'flour'},{id:'rest',title:'3분 동안 눈 감고 쉬기',xp:5,kind:'rest'},{id:'touch',title:'지금부터 얼굴 만지지 않기',xp:6,kind:'skin'},{id:'moist',title:'평소 쓰던 보습제 챙기기',xp:6,kind:'skin'},{id:'sleep',title:'오늘 30분 일찍 잘 준비하기',xp:10,kind:'sleep'},{id:'diary',title:'피부 일기 한 줄 남기기',xp:7,kind:'diary'},{id:'walk',title:'5분만 가볍게 걷기',xp:7,kind:'rest'}];
+const missionPool=[
+{id:'water',title:'물 한 컵 더 마시기',xp:5,kind:'water',icon:'💧'},
+{id:'record',title:'오늘 피부 기록 남기기',xp:8,kind:'record',icon:'✎'},
+{id:'photo',title:'피부 사진 한 장 남기기',xp:8,kind:'photo',icon:'📷'},
+{id:'flour',title:'다음 식사는 밀가루 없이 먹기',xp:12,kind:'flour',icon:'🌾'},
+{id:'salad',title:'오늘 샐러드나 생채소 한 번 먹기',xp:10,kind:'food',icon:'🥗'},
+{id:'fruit',title:'과일 한 번 챙겨 먹기',xp:7,kind:'food',icon:'🍎'},
+{id:'nuts',title:'견과류 한 줌 챙기기',xp:7,kind:'food',icon:'🥜'},
+{id:'green',title:'녹색 채소 한 가지 먹기',xp:8,kind:'food',icon:'🥬'},
+{id:'sweetDrink',title:'단 음료 대신 물 선택하기',xp:8,kind:'water',icon:'🥤'},
+{id:'rest',title:'3분 동안 눈 감고 쉬기',xp:5,kind:'rest',icon:'😌'},
+{id:'touch',title:'지금부터 얼굴 만지지 않기',xp:6,kind:'skin',icon:'🙌'},
+{id:'moist',title:'평소 쓰던 보습제 꼼꼼히 바르기',xp:6,kind:'skin',icon:'🧴'},
+{id:'sunscreen',title:'외출 전 선크림 챙기기',xp:7,kind:'skin',icon:'☀️'},
+{id:'pillow',title:'베개 커버 상태 확인하기',xp:8,kind:'skin',icon:'🛏️'},
+{id:'sleep',title:'오늘 30분 일찍 잘 준비하기',xp:10,kind:'sleep',icon:'😴'},
+{id:'phone',title:'자기 전 휴대폰 30분 쉬기',xp:10,kind:'sleep',icon:'📵'},
+{id:'diary',title:'피부 일기 한 줄 남기기',xp:7,kind:'diary',icon:'📖'},
+{id:'walk',title:'10분만 가볍게 걷기',xp:8,kind:'rest',icon:'🚶‍♀️'},
+{id:'stretch',title:'스트레칭 10분 하기',xp:8,kind:'rest',icon:'🧘‍♀️'}
+];
 function hashDate(x){let h=0;for(const c of x)h=(h*31+c.charCodeAt(0))>>>0;return h}
 function missionStreakCount(){let n=0,d=today();while(state.missions?.[d]?.done){n++;d=addDays(d,-1)}return n}
-function chooseMission(){if(state.missions[today()])return state.missions[today()];const r=state.records[today()],recent=(state.missionHistory||[]).slice(-5).map(x=>x.id);let kinds=[];if(!r)kinds.push('record');if(r&&r.water<1.5)kinds.push('water');if(r&&r.sleep<7)kinds.push('sleep');if(r&&r.flour>0)kinds.push('flour');if(!state.actualPhotos.some(p=>p.date===today()))kinds.push('photo');if(r&&!r.diaryLine)kinds.push('diary');kinds.push('skin','rest');let c=missionPool.filter(m=>kinds.includes(m.kind)&&!recent.includes(m.id));if(!c.length)c=missionPool.filter(m=>!recent.includes(m.id));if(!c.length)c=missionPool;const lucky=hashDate(today()+'lucky')%100<18,p=c[hashDate(today()+Object.keys(state.records).length)%c.length],m={...p,date:today(),lucky,xp:lucky?p.xp*2:p.xp,done:false};state.missions[today()]=m;save();return m}
+function chooseMission(){if(state.missions[today()])return state.missions[today()];const r=state.records[today()],recent=(state.missionHistory||[]).slice(-5).map(x=>x.id);let kinds=[];if(!r)kinds.push('record');if(r&&r.water<1.5)kinds.push('water');if(r&&r.sleep<7)kinds.push('sleep');if(r&&r.flour>0)kinds.push('flour');if(!state.actualPhotos.some(p=>p.date===today()))kinds.push('photo');if(r&&!r.diaryLine)kinds.push('diary');kinds.push('skin','rest','food');let c=missionPool.filter(m=>kinds.includes(m.kind)&&!recent.includes(m.id));if(!c.length)c=missionPool.filter(m=>!recent.includes(m.id));if(!c.length)c=missionPool;const lucky=hashDate(today()+'lucky')%100<18,p=c[hashDate(today()+Object.keys(state.records).length)%c.length],m={...p,date:today(),lucky,xp:lucky?p.xp*2:p.xp,done:false};state.missions[today()]=m;save();return m}
 function coachForToday(){
   const r=state.records[today()];
   const recent=lastNDays(7);
@@ -1034,11 +1188,11 @@ function renderCoachMission(){
  const q=todayQuote(),card=document.getElementById('quoteCard');card.className='card quote-card '+q.cls;dailyMotivation.textContent=q.text;quoteType.textContent=q.label;quoteDayLabel.textContent=`Skin Reset ${projectDay()}일째`;
  const fav=(state.favoriteQuotes||[]).includes(q.id);favoriteQuote.textContent=fav?'♥':'♡';favoriteQuote.classList.toggle('active',fav);favoriteQuote.dataset.quoteId=q.id;
  if(!state.quoteHistory[today()]){state.quoteHistory[today()]={id:q.id,type:q.type,text:q.text,label:q.label};save()}
- const m=chooseMission();missionCard.classList.toggle('lucky',m.lucky);missionTag.textContent=m.lucky?'🎁 Lucky Mission!':'🌱 오늘의 작은 미션';missionTitle.textContent=m.title;missionXP.textContent=`+${m.xp} XP`;missionReason.textContent=m.lucky?'오늘은 특별 보상 2배 미션이 등장했어요.':'최근 기록과 최근에 나오지 않은 미션을 함께 고려했어요.';completeMission.style.display=m.done?'none':'block';missionDone.style.display=m.done?'block':'none';
+ const m=chooseMission();missionCard.classList.toggle('lucky',m.lucky);missionTag.textContent=m.lucky?'🎁 Lucky Mission!':'🌱 오늘의 작은 미션';missionTitle.textContent=`${m.icon||'🌱'} ${m.title}`;missionXP.textContent=`+${m.xp} XP`;missionReason.textContent=m.lucky?'오늘은 특별 보상 2배 미션이 등장했어요.':'최근 기록과 최근에 나오지 않은 미션을 함께 고려했어요.';completeMission.style.display=m.done?'none':'block';missionDone.style.display=m.done?'block':'none';
  const xp=Number(state.xp||0),lv=Math.floor(xp/100)+1,w=xp%100,t=treeInfo();levelText.textContent=`Level ${lv}`;xpText.textContent=`${xp} XP`;nextLevelText.textContent=`다음 레벨까지 ${100-w} XP`;xpBar.style.width=w+'%';skinTree.textContent=t[0];treeCaption.textContent=t[1];
  const days=projectDay();welcomeDay.textContent=`${days}일째`;const greet=['오늘도 미래의 피부를 위한 작은 선택 하나.','오늘의 기록이 내일의 자신감을 만듭니다.','완벽함보다 꾸준함이 더 강합니다.','피부는 조급함보다 시간을 좋아합니다.','오늘도 나를 다정하게 돌보는 하루.'];welcomeMessage.textContent=greet[hashDate(today()+'greet')%greet.length];renderJourney(days);
 }
-completeMission.onclick=()=>{const m=chooseMission();if(m.done)return;m.done=true;m.completedAt=new Date().toISOString();state.xp=Number(state.xp||0)+m.xp;state.missions[today()]=m;state.missionHistory.push({...m});save();renderAll();toast(`미션 완료! +${m.xp} XP`)};
+completeMission.onclick=completeTodayMission;
 function renderDiary(target,records,limit=999){target.innerHTML='';const q=(diarySearch?.value||'').trim().toLowerCase();records.filter(r=>(r.diaryLine||r.selfMessage)&&(!q||`${r.diaryLine} ${r.selfMessage} ${r.memo}`.toLowerCase().includes(q))).slice(0,limit).forEach(r=>{const d=document.createElement('div');d.className='diary-entry';d.innerHTML=`<small>${r.date} · ${r.mood||'🙂'} · 피부 ${r.score}점</small>${r.diaryLine?`<p>${r.diaryLine}</p>`:''}${r.selfMessage?`<p class="sub">오늘 나에게: ${r.selfMessage}</p>`:''}`;target.appendChild(d)});if(!target.children.length)target.innerHTML='<p class="sub">아직 작성한 피부 일기가 없습니다.</p>'}
 if(document.getElementById('diarySearch'))diarySearch.oninput=()=>renderDiary(diaryList,Object.values(state.records).sort((a,b)=>b.date.localeCompare(a.date)));
 function answerCoach(q){const r=lastNDays(30);if(!r.length)return '분석할 기록이 아직 없습니다.';const av=a=>avg(a.map(x=>x.score));if(q==='best'){const b=r.slice().sort((a,b)=>b.score-a.score)[0];return `${b.date}에 ${b.score}점으로 가장 높았습니다. 당시 수면 ${b.sleep}시간, 물 ${b.water}L였습니다.`}if(q==='flour'){const n=r.filter(x=>x.flour===0),y=r.filter(x=>x.flour>0);return n.length&&y.length?`무밀가루 날 평균 ${av(n)}점, 섭취한 날 평균 ${av(y)}점입니다. 기록상 상관관계 참고치이며 원인 확정은 아닙니다.`:'두 조건의 기록이 모두 필요합니다.'}if(q==='priority'){const a=[['수면',r.filter(x=>x.sleep>=7),r.filter(x=>x.sleep<7)],['물',r.filter(x=>x.water>=1.5),r.filter(x=>x.water<1.5)],['밀가루',r.filter(x=>x.flour===0),r.filter(x=>x.flour>0)]].filter(x=>x[1].length&&x[2].length).map(x=>({n:x[0],d:av(x[1])-av(x[2])})).sort((a,b)=>b.d-a.d);return a.length?`현재 기록에서는 ${a[0].n} 조건의 평균 차이가 ${a[0].d}점으로 가장 큽니다. 작은 실험으로 다시 확인해보세요.`:'비교 가능한 기록이 더 필요합니다.'}if(q==='praise')return `최근 30일 중 ${r.length}일을 기록했습니다. 무엇보다 기록을 이어온 점이 가장 잘한 부분입니다.`;const r7=lastNDays(7),low=r7.filter(x=>x.sleep<7).length,fl=r7.filter(x=>x.flour>0).length;return `최근 7일에는 수면 7시간 미만 ${low}회, 밀가루 섭취 ${fl}회가 기록되었습니다. 단일 원인으로 단정할 수 없지만 먼저 살펴볼 변수입니다.`}

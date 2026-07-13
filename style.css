@@ -889,3 +889,120 @@
 
 /* Desktop width safeguard */
 html,body{width:100%;max-width:none;margin:0;}
+
+
+/* =========================================================
+   Daily Skin Routine & Home Mission
+   ========================================================= */
+.home-habit-grid{margin-top:16px;align-items:stretch}
+.routine-card,.home-mission-card{min-height:100%}
+.routine-head{align-items:flex-start}
+.routine-head h2{margin:3px 0 4px}
+.routine-progress-text{
+  min-width:66px;
+  padding:9px 12px;
+  border-radius:999px;
+  background:#f8eee8;
+  text-align:center;
+  font-size:13px;
+  font-weight:800;
+  color:#735c51;
+}
+.routine-progress{margin:13px 0 14px}
+.routine-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.routine-item{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:62px;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  cursor:pointer;
+  transition:.16s ease;
+}
+.routine-item:hover{border-color:#d8c4b9;transform:translateY(-1px)}
+.routine-item input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.routine-checkmark{
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:27px;
+  height:27px;
+  border:1.5px solid #d7c8c0;
+  border-radius:50%;
+  color:transparent;
+  font-size:14px;
+  font-weight:900;
+  background:#fff;
+}
+.routine-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.routine-copy b{font-size:13px}
+.routine-copy small{font-size:10px;color:var(--muted)}
+.routine-item:has(input:checked){
+  border-color:#e4a08c;
+  background:#fff7f3;
+}
+.routine-item input:checked + .routine-checkmark{
+  border-color:#df866f;
+  background:#df866f;
+  color:#fff;
+}
+.routine-item:has(input:checked) .routine-copy b{
+  color:#9b4e3d;
+}
+.routine-footer{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid #eee5e0;
+  font-size:11px;
+  color:var(--muted);
+}
+.routine-footer b{white-space:nowrap;color:#5d4d45}
+.home-mission-card{
+  display:flex;
+  flex-direction:column;
+  background:linear-gradient(145deg,#fff,#fff8f2);
+}
+.home-mission-card.lucky{
+  background:linear-gradient(145deg,#fff8dc,#fff3e9);
+  border-color:#eccd83;
+}
+.home-mission-body{
+  display:flex;
+  align-items:center;
+  gap:15px;
+  flex:1;
+  padding:22px 0;
+}
+.home-mission-icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  width:58px;
+  height:58px;
+  border-radius:18px;
+  background:#f7eee9;
+  font-size:28px;
+}
+.home-mission-card.lucky .home-mission-icon{background:#fff0ba}
+.home-mission-button{width:100%}
+.home-mission-card .mission-done{margin-top:0}
+@media(max-width:760px){
+  .routine-list{grid-template-columns:1fr}
+  .routine-footer{align-items:flex-start;flex-direction:column}
+}

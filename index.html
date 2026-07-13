@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f7efe9" />
   <link rel="manifest" href="manifest.webmanifest" />
   <title>Skin Reset 365</title>
-  <meta name="app-version" content="2.0.3">
+  <meta name="app-version" content="2.1.0">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -97,7 +97,86 @@
           <button class="dashboard-tile" data-go="quotes"><span class="tile-icon">“</span><span><b>문구 보관함</b><small>오늘의 문구·즐겨찾기</small></span><em>→</em></button>
           <button class="dashboard-tile" data-go="settings"><span class="tile-icon">⚙</span><span><b>알림·설정</b><small>기록 시간과 앱 설정</small></span><em>→</em></button>
         </div>
+
       </section>
+
+      <div class="grid section-grid home-habit-grid">
+        <article class="card routine-card">
+          <div class="metric routine-head">
+            <div>
+              <span class="eyebrow">Daily routine</span>
+              <h2>오늘의 피부 루틴</h2>
+              <p class="sub">챙겨 먹거나 완료한 항목을 바로 체크하세요.</p>
+            </div>
+            <div class="routine-progress-text" id="routineProgressText">0 / 7</div>
+          </div>
+
+          <div class="progress routine-progress">
+            <span id="routineProgressBar" style="width:0%"></span>
+          </div>
+
+          <div class="routine-list" id="routineList">
+            <label class="routine-item">
+              <input type="checkbox" data-routine="berberSmoothie">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>베르베르 스무디</b><small data-routine-time="berberSmoothie">미완료</small></span>
+            </label>
+            <label class="routine-item">
+              <input type="checkbox" data-routine="phyto">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>파이토</b><small data-routine-time="phyto">미완료</small></span>
+            </label>
+            <label class="routine-item">
+              <input type="checkbox" data-routine="bromelain">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>브로멜라인</b><small data-routine-time="bromelain">미완료</small></span>
+            </label>
+            <label class="routine-item">
+              <input type="checkbox" data-routine="pantothenic">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>판토텐산</b><small data-routine-time="pantothenic">미완료</small></span>
+            </label>
+            <label class="routine-item">
+              <input type="checkbox" data-routine="monoOrange">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>모노오렌지</b><small data-routine-time="monoOrange">미완료</small></span>
+            </label>
+            <label class="routine-item">
+              <input type="checkbox" data-routine="water2L">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>물 2L</b><small data-routine-time="water2L">미완료</small></span>
+            </label>
+            <label class="routine-item">
+              <input type="checkbox" data-routine="flourFree">
+              <span class="routine-checkmark">✓</span>
+              <span class="routine-copy"><b>오늘 무밀가루</b><small data-routine-time="flourFree">미완료</small></span>
+            </label>
+          </div>
+
+          <div class="routine-footer">
+            <span id="routineCompleteMessage">하나씩 체크하며 오늘의 루틴을 완성해 보세요.</span>
+            <b id="routineStreakText">연속 완료 0일</b>
+          </div>
+        </article>
+
+        <article class="card home-mission-card" id="homeMissionCard">
+          <div class="mission-topline">
+            <span class="feature-label" id="homeMissionTag">오늘의 랜덤 미션</span>
+            <span class="mission-xp" id="homeMissionXP">+5 XP</span>
+          </div>
+          <div class="home-mission-body">
+            <div class="home-mission-icon" id="homeMissionIcon">🌱</div>
+            <div>
+              <div class="mission-title" id="homeMissionTitle">오늘의 미션을 불러오는 중</div>
+              <p class="sub" id="homeMissionReason">하루에 하나씩 새로운 미션이 나옵니다.</p>
+            </div>
+          </div>
+          <button class="primary home-mission-button" id="completeHomeMission">완료했어요</button>
+          <div id="homeMissionDone" class="mission-done" hidden>
+            오늘의 미션 완료! 작은 습관 하나를 만들었어요.
+          </div>
+        </article>
+      </div>
 
     </section>
 
