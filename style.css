@@ -1006,3 +1006,9 @@ html,body{width:100%;max-width:none;margin:0;}
   .routine-list{grid-template-columns:1fr}
   .routine-footer{align-items:flex-start;flex-direction:column}
 }
+
+
+/* v2.1.2: keep the new daily routine and mission cards visible */
+#home > .grid.section-grid.home-habit-grid{
+  display:grid !important;
+}
