@@ -822,7 +822,13 @@ function renderHome(){
   document.getElementById('dayCount').textContent=days;
   document.getElementById('streak').textContent=streak();
   document.getElementById('monthSuccess').textContent=lastNDays(30).filter(r=>r.flour===0).length;
-  [[30,'p30'],[90,'p90'],[365,'p365']].forEach(([n,id])=>{const p=clamp(Math.round(days/n*100),0,100);document.getElementById(id).style.width=p+'%';document.getElementById(id+'Text').textContent=p+'%'});
+  [[30,'p30'],[90,'p90'],[365,'p365']].forEach(([n,id])=>{
+    const p=clamp(Math.round(days/n*100),0,100);
+    const bar=document.getElementById(id);
+    const text=document.getElementById(id+'Text');
+    if(bar)bar.style.width=p+'%';
+    if(text)text.textContent=p+'%';
+  });
   const checks=state.checks[today()]||{};
   document.querySelectorAll('[data-check]').forEach(c=>c.checked=!!checks[c.dataset.check]);
   renderDailyRoutine();
@@ -1164,7 +1170,7 @@ function praiseForToday(){
 function treeInfo(){const x=Number(state.xp||0);if(x<50)return ['🌱','첫 습관을 키우는 새싹'];if(x<150)return ['🌿','꾸준함이 잎으로 자라고 있어요'];if(x<350)return ['🌳','기록이 단단한 나무가 되었어요'];if(x<700)return ['🌳🌸','작은 꽃이 피기 시작했어요'];if(x<1200)return ['🌸🌳🌸','좋은 습관이 활짝 피고 있어요'];return ['🌸🌳🦋🌸','1년의 습관이 만든 만개한 나무']}
 function renderJourney(days){
  const milestones=[{m:1,d:30,icon:'🌱'},{m:3,d:90,icon:'🌿'},{m:6,d:180,icon:'🌳'},{m:9,d:270,icon:'🌸'},{m:12,d:365,icon:'👑'}];
- const track=document.getElementById('journeyTrack');track.querySelectorAll('.journey-node').forEach(x=>x.remove());
+ const track=document.getElementById('journeyTrack');if(!track)return;track.querySelectorAll('.journey-node').forEach(x=>x.remove());
  milestones.forEach((x,i)=>{const node=document.createElement('div');const done=days>=x.d;const nextIndex=milestones.findIndex(v=>days<v.d);const current=i===(nextIndex<0?milestones.length-1:nextIndex);node.className='journey-node'+(done?' done':'')+(current&&!done?' current':'');node.innerHTML=`<div class="journey-icon">${done?'✓':x.icon}</div><b>${x.m}개월</b><span>${done?'완료':current?'진행 중':'예정'}</span>`;track.appendChild(node)});
  document.getElementById('journeyProgress').style.width=Math.min(82,days/365*82)+'%';
  let current=milestones.find(x=>days<=x.d)||milestones[milestones.length-1];let prev=milestones[milestones.indexOf(current)-1]?.d||0;let elapsed=Math.max(0,days-prev),span=current.d-prev,pc=Math.min(100,Math.round(elapsed/span*100));
@@ -1190,7 +1196,13 @@ function renderCoachMission(){
  if(!state.quoteHistory[today()]){state.quoteHistory[today()]={id:q.id,type:q.type,text:q.text,label:q.label};save()}
  const m=chooseMission();missionCard.classList.toggle('lucky',m.lucky);missionTag.textContent=m.lucky?'🎁 Lucky Mission!':'🌱 오늘의 작은 미션';missionTitle.textContent=`${m.icon||'🌱'} ${m.title}`;missionXP.textContent=`+${m.xp} XP`;missionReason.textContent=m.lucky?'오늘은 특별 보상 2배 미션이 등장했어요.':'최근 기록과 최근에 나오지 않은 미션을 함께 고려했어요.';completeMission.style.display=m.done?'none':'block';missionDone.style.display=m.done?'block':'none';
  const xp=Number(state.xp||0),lv=Math.floor(xp/100)+1,w=xp%100,t=treeInfo();levelText.textContent=`Level ${lv}`;xpText.textContent=`${xp} XP`;nextLevelText.textContent=`다음 레벨까지 ${100-w} XP`;xpBar.style.width=w+'%';skinTree.textContent=t[0];treeCaption.textContent=t[1];
- const days=projectDay();welcomeDay.textContent=`${days}일째`;const greet=['오늘도 미래의 피부를 위한 작은 선택 하나.','오늘의 기록이 내일의 자신감을 만듭니다.','완벽함보다 꾸준함이 더 강합니다.','피부는 조급함보다 시간을 좋아합니다.','오늘도 나를 다정하게 돌보는 하루.'];welcomeMessage.textContent=greet[hashDate(today()+'greet')%greet.length];renderJourney(days);
+ const days=projectDay();
+ const welcomeDayEl=document.getElementById('welcomeDay');
+ const welcomeMessageEl=document.getElementById('welcomeMessage');
+ if(welcomeDayEl)welcomeDayEl.textContent=`${days}일째`;
+ const greet=['오늘도 미래의 피부를 위한 작은 선택 하나.','오늘의 기록이 내일의 자신감을 만듭니다.','완벽함보다 꾸준함이 더 강합니다.','피부는 조급함보다 시간을 좋아합니다.','오늘도 나를 다정하게 돌보는 하루.'];
+ if(welcomeMessageEl)welcomeMessageEl.textContent=greet[hashDate(today()+'greet')%greet.length];
+ if(document.getElementById('journeyTrack'))renderJourney(days);
 }
 completeMission.onclick=completeTodayMission;
 function renderDiary(target,records,limit=999){target.innerHTML='';const q=(diarySearch?.value||'').trim().toLowerCase();records.filter(r=>(r.diaryLine||r.selfMessage)&&(!q||`${r.diaryLine} ${r.selfMessage} ${r.memo}`.toLowerCase().includes(q))).slice(0,limit).forEach(r=>{const d=document.createElement('div');d.className='diary-entry';d.innerHTML=`<small>${r.date} · ${r.mood||'🙂'} · 피부 ${r.score}점</small>${r.diaryLine?`<p>${r.diaryLine}</p>`:''}${r.selfMessage?`<p class="sub">오늘 나에게: ${r.selfMessage}</p>`:''}`;target.appendChild(d)});if(!target.children.length)target.innerHTML='<p class="sub">아직 작성한 피부 일기가 없습니다.</p>'}
